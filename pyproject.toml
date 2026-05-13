@@ -47,3 +47,12 @@ dependencies = [
     "notebook>=7.5.5",
     "python-dotenv>=1.2.2",
 ]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+# Jupyter 등에서 `import usecase`, `import util` 이 되도록 루트 패키지를 wheel에 포함
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["usecase*", "util*"]
