@@ -35,7 +35,7 @@ class BaseGraph(LangChainProjectSetup, GraphStructureImage, ABC):
         self,
         *,
         load_env: bool = True,
-        langsmith_project: str | None = "LangChain-V1-Tutorial",
+        langsmith_project: str | None = None,
     ) -> None:
         super().__init__(load_env=load_env, langsmith_project=langsmith_project)
 
@@ -66,7 +66,7 @@ class BaseGraph(LangChainProjectSetup, GraphStructureImage, ABC):
     """
     def invoke(
         self,
-        state: dict[str, Any],
+        inputs: dict[str, Any],
         config: RunnableConfig | None = None,
         *,
         context: Any = None,
@@ -79,7 +79,7 @@ class BaseGraph(LangChainProjectSetup, GraphStructureImage, ABC):
         cfg = config or cast(RunnableConfig, {})
         return invoke_graph(
             self._graph,
-            inputs=state,
+            inputs=inputs,
             config=cfg,
             context=context,
             node_names=[] if node_names is None else node_names,
@@ -108,7 +108,7 @@ class BaseGraph(LangChainProjectSetup, GraphStructureImage, ABC):
     """
     def stream(
         self,
-        state: dict[str, Any],
+        inputs: dict[str, Any],
         config: RunnableConfig | None = None,
         *,
         context: Any = None,
@@ -118,7 +118,7 @@ class BaseGraph(LangChainProjectSetup, GraphStructureImage, ABC):
         """``util.messages.stream_graph`` — ``inputs`` / ``config`` 키워드로 위임."""
         stream_graph(
             self._graph,
-            inputs=state,
+            inputs=inputs,
             config=config or cast(RunnableConfig, {}),
             context=context,
             node_names=[] if node_names is None else node_names,

@@ -16,7 +16,7 @@ class LangChainProjectSetup:
         self,
         *,
         load_env: bool = True,
-        langsmith_project: str | None = "LangChain-V1-Tutorial",
+        langsmith_project: str | None = None,
     ) -> None:
         if load_env:
             load_dotenv(override=True)
