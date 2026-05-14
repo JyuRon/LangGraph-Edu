@@ -52,7 +52,7 @@ dependencies = [
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
-# Jupyter 등에서 `import usecase`, `import util` 이 되도록 루트 패키지를 wheel에 포함
+# Jupyter 등에서 `import feature`, `import util` 이 되도록 루트 패키지를 wheel에 포함
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["base*", "usecase*", "util*"]
+include = ["base*", "feature*", "util*"]

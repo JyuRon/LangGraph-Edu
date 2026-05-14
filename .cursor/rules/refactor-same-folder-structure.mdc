@@ -16,7 +16,7 @@ alwaysApply: true
 ```python
 # ❌ 같은 폴더는 클래스 + BaseGraph 인데, 한 파일만 전역 함수·다른 import 순으로만 정리함
 
-# ✅ usecase/ 안 다른 파일을 보고 동일하게: future annotations → 서드파티 그룹 → 로컬 import,
+# ✅ feature/ 안 다른 파일을 보고 동일하게: future annotations → 서드파티 그룹 → 로컬 import,
 #    그래프 빌드 패턴(팩토리/클래스)도 형제 파일과 맞춤
 ```
 
