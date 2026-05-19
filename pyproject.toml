@@ -10,6 +10,7 @@ dependencies = [
     "langchain-community>=0.4.1",
     "langchain-experimental>=0.4.1",
     "langchain-text-splitters>=1.1.1",
+    "pydantic>=2.12.4",
     # LangChain Integrations
     "langchain-anthropic>=1.4.0",
     "langchain-mcp-adapters>=0.2.2",
@@ -18,6 +19,7 @@ dependencies = [
     "langchain-openai>=1.1.12",
     "langchain-tavily>=0.2.17",
     "langchain-teddynote>=0.5.4",
+    "tavily-python>=0.7.13",
     # LangGraph
     "langgraph>=1.1.3",
     "langgraph-checkpoint-postgres>=3.0.5",
@@ -29,6 +31,7 @@ dependencies = [
     # MCP
     "mcp>=1.26.0",
     "fastmcp>=2.12.4",
+    "httpx>=0.28.1",
     # Data Science & Visualization
     "matplotlib>=3.10.8",
     "pandas>=3.0.1",
@@ -42,12 +45,15 @@ dependencies = [
     "psycopg[binary,pool]>=3.3.3",
     # Document Processing
     "arxiv>=2.4.1",
+    "markdownify>=1.2.2",
     "pdfplumber>=0.11.9",
     "pymupdf>=1.27.2.2",
     # Development Tools
+    "ipykernel>=7.1.0",
     "jupyter>=1.1.1",
     "notebook>=7.5.5",
     "python-dotenv>=1.2.2",
+    "rich>=14.2.0",
 ]
 
 [build-system]
@@ -57,4 +63,4 @@ build-backend = "setuptools.build_meta"
 # Jupyter 등에서 `import feature`, `import util` 이 되도록 루트 패키지를 wheel에 포함
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["base*", "feature*", "util*"]
+include = ["base*", "feature*", "util*", "deep_agents_from_scratch*"]
