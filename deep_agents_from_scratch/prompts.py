@@ -63,25 +63,45 @@ WRITE_TODOS_DESCRIPTION_KOR = """복잡한 워크플로의 진행 상황을 추�
 전체 목록을 디스크 JSON 파일에 저장하고, 새 할 일 목록으로 에이전트 상태를 업데이트함."""
 
 TODO_USAGE_INSTRUCTIONS = """Based upon the user's request:
-1. Use the write_todos tool to create TODO at the start of a user request, per the tool description.
-2. After you accomplish a TODO, use the read_todos to read the TODOs in order to remind yourself of the plan. 
-3. Reflect on what you've done and the TODO.
-4. Mark you task as completed, and proceed to the next TODO.
-5. Continue this process until you have completed all TODOs.
+1. Call write_todos at the start of the user request to create a granular plan.
+2. After completing each TODO, call read_todos to remind yourself of the plan.
+3. Reflect on what you've done and what's next.
+4. Mark the just-finished item ``completed`` (and the next one ``in_progress``) by calling write_todos again with the full updated list.
+5. Continue until every TODO is ``completed``.
 
-IMPORTANT: Always create a research plan of TODOs and conduct research following the above guidelines for ANY user request.
-IMPORTANT: Aim to batch research tasks into a *single TODO* in order to minimize the number of TODOs you have to keep track of.
+## How to break the request down (granularity)
+- Aim for **3–7 TODO items** for any non-trivial request. A single all-in-one TODO is almost always wrong.
+- Each TODO ``content`` must:
+  * **start with an imperative verb** (e.g., "Search…", "Read…", "Summarize…", "Compose…"),
+  * describe **one verifiable unit of work** that you can finish and mark ``completed`` independently,
+  * be specific enough that you could not silently skip a step (e.g., "Read mcp_overview.md (offset=0, limit=400)" beats "Read research files").
+- Split research that touches multiple topics or steps into separate TODOs:
+  * "Search ..." → "Read result files in chunks" → "Synthesize answer" is a typical 3-item skeleton.
+  * Add per-topic search/read TODOs when comparing N topics (one search + one read per topic).
+- Only **one** item may be ``in_progress`` at a time. Mark items ``completed`` as soon as they're done — never batch completions at the end.
+
+IMPORTANT: Always create a granular TODO plan and follow it. Do NOT collapse the whole request into a single TODO.
 """
 
 TODO_USAGE_INSTRUCTIONS_KOR = """사용자 요청에 따라:
-1. 도구 설명에 따라 사용자 요청 시작 시 write_todos 도구를 사용하여 TODO를 생성하십시오.
-2. TODO를 완료한 후 read_todos를 사용하여 TODO를 읽고 계획을 상기하십시오.
-3. 수행한 작업과 TODO에 대해 반성하십시오.
-4. 작업을 completed로 표시하고 다음 TODO로 진행하십시오.
-5. 모든 TODO가 완료될 때까지 이 과정을 계속하십시오.
+1. 사용자 요청 시작 시 write_todos로 **세분화된 계획**을 생성하십시오.
+2. 각 TODO를 완료한 후 read_todos로 계획을 상기하십시오.
+3. 방금 한 일과 다음에 할 일을 반성하십시오.
+4. 방금 끝낸 항목을 ``completed``로(그리고 다음 항목을 ``in_progress``로) 표시하기 위해 **전체 업데이트된 목록**으로 write_todos를 다시 호출하십시오.
+5. 모든 TODO가 ``completed``가 될 때까지 반복하십시오.
 
-중요: 모든 사용자 요청에 대해 항상 TODO 연구 계획을 만들고 위 지침에 따라 연구를 수행하십시오.
-중요: 추적해야 할 TODO 수를 최소화하기 위해 연구 작업을 *단일 TODO*로 묶는 것을 목표로 하십시오.
+## 요청을 어떻게 쪼갤 것인가 (세분화 기준)
+- 비단순(non-trivial) 요청에는 **3~7개의 TODO 항목**을 목표로 하십시오. 모든 것을 묶은 단일 TODO는 거의 항상 잘못된 형태입니다.
+- 각 TODO ``content``는:
+  * **명령형 동사로 시작**해야 합니다 (예: "검색…", "읽기…", "요약…", "작성…"),
+  * **독립적으로 끝내고 completed로 표시할 수 있는, 검증 가능한 한 단위의 작업**이어야 합니다,
+  * 단계를 슬쩍 건너뛸 수 없을 만큼 구체적이어야 합니다 (예: "mcp_overview.md를 read_file(offset=0, limit=400)로 읽기"가 "리서치 파일들을 읽기"보다 낫다).
+- 여러 주제·단계를 건드리는 연구는 별도 TODO로 분리하십시오:
+  * "검색 …" → "결과 파일을 청크 단위로 읽기" → "답변 종합" 의 3단계 골격이 전형적입니다.
+  * N개 주제를 비교할 때는 주제별 검색·읽기 TODO를 추가하십시오 (주제마다 검색 1개 + 읽기 1개).
+- ``in_progress`` 상태는 **한 번에 하나만** 허용됩니다. 항목이 끝나는 즉시 ``completed``로 표시하십시오 — 마지막에 일괄 완료 처리하지 마십시오.
+
+중요: 항상 세분화된 TODO 계획을 만들고 따라가십시오. 요청 전체를 단일 TODO로 묶지 마십시오.
 """
 
 LS_DESCRIPTION = """List all files in the virtual filesystem stored in agent state.
@@ -141,22 +161,30 @@ WRITE_FILE_DESCRIPTION_KOR = """가상 파일 시스템에서 새 파일을 만�
 
 중요: 파일 전체 내용을 대체합니다."""
 
-FILE_USAGE_INSTRUCTIONS = """You have access to a virtual file system to help you retain and save context.
+FILE_USAGE_INSTRUCTIONS = """You have access to a file system (mirrored in ``state["files"]`` and persisted on disk) for context offloading.
+
+## Why context offloading matters
+The whole point of this file system is to keep your **active context window small**. Search results and sub-agent answers can be huge, so we **store the full content in files** and the agent reads only the chunks it actually needs. Never pull whole files into context up-front — read in chunks.
 
 ## Workflow Process
-1. **Orient**: Use ls() to see existing files before starting work
-2. **Save**: Use write_file() to store the user's request so that we can keep it for later 
-3. **Research**: Proceed with research. The search tool will write files.  
-4. **Read**: Once you are satisfied with the collected sources, read the files and use them to answer the user's question directly.
+1. **Orient**: Call ls() to see what files already exist before starting work.
+2. **Save**: Use write_file() to capture the user's request or any intermediate notes you want to keep.
+3. **Research**: Proceed. The search tool and sub-agent ``task`` delegations write their output to files automatically.
+4. **Chunked read**: Whenever a tool response lists files (search summaries, the `[Files updated ...]` block of a ``task`` response, etc.), do NOT read the whole file at once. Use **read_file(path, offset=0, limit=400)** first, decide if you have enough, and only fetch the next chunk (``offset=400, limit=400``, then ``offset=800, limit=400``, …) when truly needed.
+5. **Answer**: Build your final user-facing answer using ONLY content you have directly read via read_file(). Treat tool-message summaries and sub-agent chat outputs as a table-of-contents, not as evidence.
 """
 
-FILE_USAGE_INSTRUCTIONS_KOR = """컨텍스트를 유지하고 저장하는 데 도움이 되는 가상 파일 시스템에 접근할 수 있습니다.
+FILE_USAGE_INSTRUCTIONS_KOR = """``state["files"]`` 인메모리 미러와 디스크에 함께 영속화되는 파일 시스템으로 컨텍스트를 오프로딩할 수 있습니다.
+
+## 컨텍스트 오프로딩이 중요한 이유
+이 파일 시스템의 목적은 **활성 컨텍스트 윈도우를 작게 유지**하는 것입니다. 검색 결과나 서브에이전트 답변은 길어질 수 있으므로 **전체 내용은 파일에 저장**하고, 에이전트는 **실제로 필요한 청크만** 읽습니다. 절대 파일 전체를 한 번에 컨텍스트로 가져오지 마십시오 — 청크 단위로 읽으십시오.
 
 ## 워크플로 절차
-1. **Orient**: 작업을 시작하기 전에 ls()로 기존 파일을 확인하십시오
-2. **Save**: write_file()로 사용자 요청을 저장하여 나중에 보관할 수 있게 하십시오
-3. **Research**: 연구를 진행하십시오. 검색 도구가 파일을 작성합니다.
-4. **Read**: 수집한 출처에 만족하면 파일을 읽고 사용자 질문에 직접 답하십시오.
+1. **Orient**: 작업 시작 전 ls()로 어떤 파일이 이미 있는지 확인하십시오.
+2. **Save**: write_file()로 사용자 요청 또는 보존하고 싶은 중간 메모를 저장하십시오.
+3. **Research**: 연구를 진행하십시오. 검색 도구와 서브에이전트 ``task`` 위임 결과는 자동으로 파일에 기록됩니다.
+4. **청크 읽기**: 도구 응답에 파일 목록(검색 요약, ``task`` 응답의 `[Files updated ...]` 블록 등)이 나오면 **파일 전체를 한 번에 읽지 마십시오**. 먼저 **read_file(path, offset=0, limit=400)** 으로 읽고, 충분한지 판단한 뒤 정말 더 필요할 때만 다음 청크(``offset=400, limit=400``, 이어서 ``offset=800, limit=400``, …)를 가져오십시오.
+5. **답변**: read_file()로 직접 읽은 내용만을 근거로 사용자 최종 답변을 작성하십시오. 도구 메시지 요약이나 서브에이전트 채팅 출력은 목차로만 취급하고 근거로 쓰지 마십시오.
 """
 
 SUMMARIZE_WEB_SEARCH = """You are creating a minimal summary for research steering - your goal is to help an agent know what information it has collected, NOT to preserve all details.
@@ -259,6 +287,18 @@ After each search tool call, use think_tool to analyze the results:
 - Do I have enough to answer the question comprehensively?
 - Should I search more or provide my answer?
 </Show Your Thinking>
+
+<Final Message Policy>
+You are a **file-producer**, not the final responder. Your output to the parent agent is
+discarded — only the files you write to ``state["files"]`` (via ``tavily_search``) are kept.
+Therefore:
+- Do **NOT** compose a long, formatted answer for the user. The parent agent will read the
+  files you produced and answer the user itself.
+- When you decide research is done, finish with **one short sentence** like
+  "Saved <N> file(s): <name1>, <name2>." That's it.
+- Do not summarize the file contents inside your final message — that information should
+  live in the files, not in your reply.
+</Final Message Policy>
 """
 
 RESEARCHER_INSTRUCTIONS_KOR = """당신은 사용자가 입력한 주제에 대해 연구를 수행하는 연구 보조입니다. 참고로 오늘 날짜는 {date}입니다.
@@ -307,6 +347,13 @@ RESEARCHER_INSTRUCTIONS_KOR = """당신은 사용자가 입력한 주제에 대�
 - 질문에 포괄적으로 답하기에 충분합니까?
 - 더 검색해야 합니까, 아니면 답변을 제공해야 합니까?
 </Show Your Thinking>
+
+<최종 메시지 정책>
+당신은 **파일 생산자**이지 최종 응답자가 아닙니다. 부모 에이전트에게 보내는 자연어 출력은 폐기됩니다 — ``tavily_search``로 ``state["files"]``에 기록한 파일만 부모에게 전달됩니다. 따라서:
+- 사용자에게 보낼 길고 형식 갖춘 답변을 **작성하지 마십시오**. 당신이 만든 파일을 부모 에이전트가 직접 읽고 사용자에게 답합니다.
+- 연구가 끝났다고 판단되면 **한 줄짜리 짧은 문장**으로 종료하십시오. 예: "Saved <N> file(s): <name1>, <name2>."
+- 최종 메시지에 파일 내용을 요약하지 마십시오 — 그 정보는 파일에 있어야지 당신의 답변에 있어서는 안 됩니다.
+</최종 메시지 정책>
 """
 
 TASK_DESCRIPTION_PREFIX = """Delegate a task to a specialized sub-agent with isolated context. Available agents for delegation are:
@@ -356,7 +403,21 @@ Your role is to coordinate research by delegating specific research tasks to sub
 - Each **task** call creates a dedicated research agent with isolated context
 - Sub-agents can't see each other's work - provide complete standalone instructions
 - Use clear, specific language - avoid acronyms or abbreviations in task descriptions
-</Scaling Rules>"""
+</Scaling Rules>
+
+<Isolation Contract>
+Sub-agents are strictly isolated from you. By design:
+- You do NOT receive the sub-agent's natural-language analysis or final answer.
+- The ``task`` tool response contains only the **list of files the sub-agent produced** (in state["files"]) plus a directive to read them.
+- All reasoning about what to tell the user is **your** job, grounded in the file contents you read yourself. The sub-agent is a pure file-producer.
+</Isolation Contract>
+
+<Mandatory Post-Delegation Workflow>
+After each ``task`` call you MUST:
+1. **Inspect** the file list in the tool response (lines starting with ``  -``).
+2. **Read in chunks** — call read_file(path, offset=0, limit=400) on the most relevant file first. Decide whether the information you have is enough. Only when it isn't, fetch the next chunk (offset=400, limit=400 → offset=800, limit=400 → …). Do this **per file**, not by dumping everything at once.
+3. **Synthesize** your final user-facing answer using ONLY content you have directly read via read_file(). Never invent details that are not in the files — if a file doesn't have what you need, either read another chunk, read another file, or delegate a new ``task``.
+</Mandatory Post-Delegation Workflow>"""
 
 SUBAGENT_USAGE_INSTRUCTIONS_KOR = """서브에이전트에 작업을 위임할 수 있습니다.
 
@@ -402,7 +463,21 @@ SUBAGENT_USAGE_INSTRUCTIONS_KOR = """서브에이전트에 작업을 위임할 �
 - 각 **task** 호출은 격리된 컨텍스트를 가진 전용 연구 에이전트를 생성합니다
 - 서브에이전트는 서로의 작업을 볼 수 없습니다 - 완전히 독립적인 지시를 제공하십시오
 - 명확하고 구체적인 언어를 사용하십시오 - 작업 설명에서 약어나 축약을 피하십시오
-</Scaling Rules>"""
+</Scaling Rules>
+
+<격리 계약>
+서브에이전트는 당신과 엄격히 격리되어 있습니다. 설계상:
+- 서브에이전트의 자연어 분석이나 최종 답변은 당신에게 전달되지 **않습니다**.
+- ``task`` 도구 응답에는 오직 **서브에이전트가 만든 파일 목록**(state["files"])과 그것을 읽으라는 지시만 들어 있습니다.
+- 사용자에게 무엇을 말할지에 대한 모든 추론은 **당신**이 책임집니다. 직접 읽은 파일 내용을 근거로 판단하십시오. 서브에이전트는 순수한 파일 생산자일 뿐입니다.
+</격리 계약>
+
+<위임 후 필수 워크플로>
+각 ``task`` 호출 후 반드시 다음을 수행하십시오:
+1. **확인**: 도구 응답의 파일 목록(``  -``로 시작하는 줄)을 열거하십시오.
+2. **청크 읽기**: 가장 관련성 높은 파일부터 read_file(path, offset=0, limit=400)으로 호출하십시오. 정보가 충분한지 판단한 뒤, 부족할 때만 다음 청크(offset=400, limit=400 → offset=800, limit=400 → …)를 가져오십시오. **파일을 통째로 한 번에 읽지 마십시오** — 파일별로 필요한 만큼만 단계적으로 읽으십시오.
+3. **종합**: read_file로 직접 읽은 내용만을 근거로 사용자 최종 답변을 작성하십시오. 파일에 없는 내용을 만들어 내지 마십시오 — 필요한 정보가 부족하면 다음 청크를 읽거나, 다른 파일을 읽거나, 새 ``task``를 위임하십시오.
+</위임 후 필수 워크플로>"""
 
 
 

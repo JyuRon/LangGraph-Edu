@@ -138,7 +138,10 @@ def create_file_tools(
         content: str,
         tool_call_id: Annotated[str, InjectedToolCallId],
     ) -> Command:
-        """Write content to a file on disk.
+        """Write content to a file on disk and mirror it into ``state["files"]``.
+
+        디스크가 단일 영속 저장소이며, 동시에 ``state["files"]`` 인메모리 미러를
+        갱신해 LangGraph reducer가 sub-agent → 부모 자동 병합을 처리하게 한다.
 
         Args:
             file_path: Path where the file should be created/updated
@@ -146,7 +149,7 @@ def create_file_tools(
             tool_call_id: Tool call identifier for message response
 
         Returns:
-            Command with ToolMessage confirming the write
+            Command updating ``state["files"]`` and a confirming ToolMessage
         """
         try:
             saved_path = file_store.write_text(file_path, content)
@@ -159,8 +162,10 @@ def create_file_tools(
                 }
             )
 
+        # 디스크 + state 미러링: file_reducer가 기존 dict와 자동 병합
         return Command(
             update={
+                "files": {file_path: content},
                 "messages": [
                     ToolMessage(
                         f"Updated file {file_path} (saved to {saved_path})",

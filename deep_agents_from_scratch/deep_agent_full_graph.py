@@ -35,6 +35,7 @@ from deep_agents_from_scratch.prompts import (
     TODO_USAGE_INSTRUCTIONS_KOR,
 )
 from deep_agents_from_scratch.research_tools import (
+    create_tavily_search_tool,
     get_current_time,
     think_tool,
     tavily_search,
@@ -109,7 +110,6 @@ def _build_full_system_prompt(
     )
 
 
-# 노트북·간단 스크립트용 기본 통합 시스템 프롬프트
 SYSTEM_PROMPT = _build_full_system_prompt(
     _build_subagent_instructions(
         _DEFAULT_MAX_CONCURRENT_RESEARCH_UNITS,
@@ -126,16 +126,11 @@ SYSTEM_PROMPT_KOR = _build_full_system_prompt(
     file_instructions=FILE_USAGE_INSTRUCTIONS_KOR,
 )
 
-# 리서치 서브에이전트 기본 구성 (import 시점 날짜로 프롬프트 format)
 RESEARCH_SUB_AGENT = _make_research_sub_agent()
 
 
 class DeepAgentFullGraph(BaseGraph):
-    """``create_agent`` Full Deep Agent (TODO + 파일 + Tavily 리서치 Sub-agent ``task`` 위임).
-
-    외부에서는 ``g = DeepAgentFullGraph()`` 뒤 ``g.invoke(...)`` / ``g.stream(...)``,
-    LangGraph **노드 구조**는 ``g.show_graph()`` 로 본다.
-    """
+    """Full deep agent: TODO, files, Tavily search, and sub-agent ``task`` delegation."""
 
     def __init__(
         self,
@@ -161,7 +156,6 @@ class DeepAgentFullGraph(BaseGraph):
         self._max_concurrent_research_units = max_concurrent_research_units
         self._max_researcher_iterations = max_researcher_iterations
 
-        # 인스턴스별 파일·TODO 저장소 (글로벌 경로 변경 없이 경로 격리)
         self._file_store = AgentFileStore(
             agent_files_dir if agent_files_dir is not None else DEFAULT_AGENT_FILES_DIR
         )
@@ -170,13 +164,10 @@ class DeepAgentFullGraph(BaseGraph):
         )
         ls_tool, read_file_tool, write_file_tool = create_file_tools(self._file_store)
         write_todos_tool, read_todos_tool = create_todo_tools(self._todo_store)
+        tavily_search_tool = create_tavily_search_tool(self._file_store)
 
-        # LLM 객체 초기화
         self._llm: BaseChatModel = init_chat_model(model, temperature=temperature)
-
-        # 리서치 서브에이전트에 할당할 도구 리스트 (웹 검색 및 전략적 사고 도구)
-        self._sub_agent_tools: list[BaseTool] = [tavily_search, think_tool]
-        # 메인 에이전트에 할당할 파일 시스템 및 TODO 관리 도구, 전략적 사고 도구 포함
+        self._sub_agent_tools: list[BaseTool] = [tavily_search_tool, think_tool]
         self._built_in_tools: list[BaseTool] = [
             ls_tool,
             read_file_tool,
@@ -207,15 +198,16 @@ class DeepAgentFullGraph(BaseGraph):
             )
         )
 
-        # 서브에이전트에게 작업 위임을 위한 Task Tool 생성 (모델, 상태, 도구 전달)
         task_tool = _create_task_tool(
-            self._sub_agent_tools, self._subagents, self._llm, DeepAgentState
+            self._sub_agent_tools,
+            self._subagents,
+            self._llm,
+            DeepAgentState,
         )
-        # 메인 에이전트에 위임 도구 포함 전체 도구 리스트 생성 (검색 도구 직접 사용 가능)
-        delegation_tools = [task_tool]  # sub agent
+        delegation_tools = [task_tool]
         self._tools: list[BaseTool] = (
             self._sub_agent_tools + self._built_in_tools + delegation_tools
-        )  # search available to main agent for trivial cases
+        )
 
         self._recursion_limit = recursion_limit
         self._graph: CompiledStateGraph = self._compile_graph()
@@ -253,15 +245,12 @@ class DeepAgentFullGraph(BaseGraph):
         return self._todo_store
 
     def _compile_graph(self) -> CompiledStateGraph:
-        # Deep Agent 생성 및 설정
         agent = create_agent(
             self._llm,
             self._tools,
             system_prompt=self._system_prompt,
             state_schema=DeepAgentState,
-        ).with_config(
-            {"recursion_limit": self._recursion_limit}
-        )  # 에이전트 반복 실행 최대 횟수 제한
+        ).with_config({"recursion_limit": self._recursion_limit})
         return cast(CompiledStateGraph, agent)
 
 

@@ -2,21 +2,27 @@
 
 This module provides search and content processing utilities for the research agent,
 including web search capabilities and content summarization tools.
+
+``tavily_search``는 ``AgentFileStore``(디스크) 기반으로 동작한다. 그래프·에이전트
+인스턴스마다 별도 store를 넘기면 부모/서브 에이전트가 동일한 디렉터리를 공유한다.
+모듈 레벨 ``tavily_search``는 기본 store에 바인딩된 호환용 인스턴스다.
 """
 
+from __future__ import annotations
+
+import textwrap
 from datetime import datetime
 
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, ToolMessage
-from langchain_core.tools import InjectedToolArg, InjectedToolCallId, tool
-from langgraph.prebuilt import InjectedState
+from langchain_core.tools import BaseTool, InjectedToolArg, InjectedToolCallId, tool
 from langgraph.types import Command
 from pydantic import BaseModel, Field
 from tavily import TavilyClient
 from typing_extensions import Annotated, Literal
 
+from .file_tools import AgentFileStore
 from .prompts import SUMMARIZE_WEB_SEARCH
-from .deep_agent_state import DeepAgentState
 
 
 def get_current_time() -> str:
@@ -152,87 +158,112 @@ def process_search_results(results: dict) -> list[dict]:
     return processed_results
 
 
-@tool(parse_docstring=True)
-def tavily_search(
-    query: str,
-    state: Annotated[DeepAgentState, InjectedState],
-    tool_call_id: Annotated[str, InjectedToolCallId],
-    max_results: Annotated[int, InjectedToolArg] = 1,
-    topic: Annotated[
-        Literal["general", "news", "finance"], InjectedToolArg
-    ] = "general",
-) -> Command:
-    """웹 검색을 수행하고 상세한 결과를 파일에 저장하면서 최소한의 컨텍스트만 반환합니다.
+def _format_search_file(query: str, result: dict) -> str:
+    """검색 결과 1건을 파일에 저장할 Markdown 본문으로 포맷."""
+    raw_content = result.get("raw_content") or "No raw content available"
+    # textwrap.dedent로 raw f-string 들여쓰기 잔재 제거 (저장본 들여쓰기 방지)
+    return textwrap.dedent(
+        f"""\
+        # Search Result: {result['title']}
 
-    웹 검색을 수행하고 전체 콘텐츠를 파일에 저장하여 컨텍스트 오프로딩을 수행합니다.
-    에이전트가 다음 단계를 결정하는 데 도움이 되는 필수 정보만 반환합니다.
+        **URL:** {result['url']}
+        **Query:** {query}
+        **Date:** {get_current_time()}
 
-    Args:
-        query: 실행할 검색 쿼리
-        state: 파일 저장을 위한 주입된 에이전트 상태
-        tool_call_id: 주입된 도구 호출 식별자
-        max_results: 반환할 최대 결과 수 (기본값: 1)
-        topic: 토픽 필터 - 'general', 'news', 또는 'finance' (기본값: 'general')
+        ## Summary
+        {result['summary']}
 
-    Returns:
-        전체 결과를 파일에 저장하고 최소한의 요약을 제공하는 Command
-    """
-    # 검색 실행
-    search_results = run_web_search(
-        query,
-        max_results=max_results,
-        topic=topic,
-        include_raw_content=True,
+        ## Raw Content
+        {raw_content}
+        """
     )
 
-    # 결과 처리 및 요약
-    processed_results = process_search_results(search_results)
 
-    # 각 결과를 파일에 저장하고 요약 준비
-    files = state.get("files", {})
-    saved_files = []
-    summaries = []
+def create_tavily_search_tool(store: AgentFileStore | None = None) -> BaseTool:
+    """``AgentFileStore``에 바인딩된 ``tavily_search`` 도구를 만든다.
 
-    for i, result in enumerate(processed_results):
-        # 요약에서 AI가 생성한 파일명 사용
-        filename = result["filename"]
-
-        # 전체 상세 정보를 포함한 파일 콘텐츠 생성
-        file_content = f"""
-            # Search Result: {result['title']}
-
-            **URL:** {result['url']}
-            **Query:** {query}
-            **Date:** {get_current_time()}
-
-            ## Summary
-            {result['summary']}
-
-            ## Raw Content
-            {result['raw_content'] if result['raw_content'] else 'No raw content available'}
-        """
-
-        files[filename] = file_content
-        saved_files.append(filename)
-        summaries.append(f"- {filename}: {result['summary']}...")
-
-    # 도구 메시지를 위한 최소한의 요약 생성 - 수집된 내용에 집중
-    # chr(10) = \n
-    summary_text = f"""
-        🔍 Found {len(processed_results)} result(s) for '{query}':
-
-        {chr(10).join(summaries)}
-
-        Files: {', '.join(saved_files)}
-        💡 Use read_file() to access full details when needed.
+    부모 에이전트와 서브 에이전트가 동일한 ``AgentFileStore``를 공유하면
+    검색 결과가 한 디렉터리에 누적되어 ``ls`` / ``read_file`` 로 그대로 접근할 수 있다.
     """
+    file_store = store or AgentFileStore()
 
-    return Command(
-        update={
-            "files": files,
+    @tool(parse_docstring=True)
+    def tavily_search(
+        query: str,
+        tool_call_id: Annotated[str, InjectedToolCallId],
+        max_results: Annotated[int, InjectedToolArg] = 1,
+        topic: Annotated[
+            Literal["general", "news", "finance"], InjectedToolArg
+        ] = "general",
+    ) -> Command:
+        """웹 검색을 수행하고 상세 결과는 디스크 파일로 저장한 뒤 요약만 반환합니다.
+
+        Tavily 검색 결과를 ``AgentFileStore`` 디렉터리에 직접 기록해 컨텍스트
+        오프로딩을 수행합니다. 도구 메시지로는 다음 단계를 결정할 수 있는 최소
+        정보(파일명 + 요약)만 돌려줍니다.
+
+        Args:
+            query: 실행할 검색 쿼리
+            tool_call_id: 주입된 도구 호출 식별자
+            max_results: 반환할 최대 결과 수 (기본값: 1)
+            topic: 토픽 필터 - 'general', 'news', 또는 'finance' (기본값: 'general')
+
+        Returns:
+            저장된 파일 목록과 요약을 담은 ToolMessage Command
+        """
+        search_results = run_web_search(
+            query,
+            max_results=max_results,
+            topic=topic,
+            include_raw_content=True,
+        )
+        processed_results = process_search_results(search_results)
+
+        # 디스크 + state["files"] 미러링: file_reducer가 기존 dict와 자동 병합
+        new_files: dict[str, str] = {}
+        saved_files: list[str] = []
+        summaries: list[str] = []
+        for result in processed_results:
+            # 요약 단계에서 AI가 생성한 파일명을 사용 (의미 있는 슬러그)
+            filename = result["filename"]
+            file_content = _format_search_file(query, result)
+
+            try:
+                file_store.write_text(filename, file_content)
+            except ValueError as exc:
+                # 잘못된 파일 경로(루트 탈출 등)는 한 줄 에러로 기록 후 다음 결과로
+                summaries.append(f"- {filename}: ERROR - {exc}")
+                continue
+
+            new_files[filename] = file_content
+            saved_files.append(filename)
+            summaries.append(f"- {filename}: {result['summary']}...")
+
+        summary_text = textwrap.dedent(
+            f"""\
+            🔍 Found {len(processed_results)} result(s) for '{query}':
+
+            {chr(10).join(summaries)}
+
+            Files saved to: {file_store.root}
+            Files: {', '.join(saved_files) if saved_files else '(none)'}
+            💡 Use read_file() to access full details when needed.
+            """
+        )
+
+        update: dict = {
             "messages": [ToolMessage(summary_text, tool_call_id=tool_call_id)],
         }
-    )
+        if new_files:
+            update["files"] = new_files
+        return Command(update=update)
+
+    return tavily_search
+
+
+# 단일 기본 저장소용 모듈 레벨 도구 (노트북·간단 스크립트 호환)
+_default_store = AgentFileStore()
+tavily_search = create_tavily_search_tool(_default_store)
 
 
 @tool(parse_docstring=True)
