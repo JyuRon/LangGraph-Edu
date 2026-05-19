@@ -1,25 +1,38 @@
 ---
-description: 리팩토링 시 대상 파일과 같은 폴더의 동료 파일 구조·관례에 맞춘다
+description: 리팩토링 시 feature/ 폴더의 구조·관례에 맞춘다
 alwaysApply: true
 ---
 
-# 리팩토링 시 폴더 내 구조 정렬
+# 리팩토링 시 feature/ 구조 정렬
 
 ## 원칙
 
-- **동료 파일 우선**: 리팩터링 전에 대상 파일이 있는 **디렉터리의 다른 소스 파일**을 읽고, 그쪽에 이미 정해진 **배치 순서·추상화 수준·네이밍·import 스타일**을 따른다.
-- **구조 일치**: 같은 폴더에서 쓰는 패턴(예: `from __future__ import annotations`, `build_*` 팩토리 vs 클래스 래퍼, `TypedDict` 출처, 모듈 상수/그래프 노출 방식)을 **한 파일만 예외적으로** 바꾸지 않는다. 폴더 전체 관례가 바뀌어야 할 때만 별도 작업으로 다룬다.
-- **범위**: 폴더 밖 코드를 복사해 오는 것이 아니라, **같은 디렉터리 기준**으로 정렬한다. 상위 공통 모듈(`base/`, `util/` 등)은 이미 그 폴더 관례에 포함된 경우에만 참고한다.
+- **feature/ 우선**: 리팩터링 전에 `feature/` 디렉터리에서 **목적이 비슷한** 소스 파일을 읽고, 그쪽에 정해진 **배치 순서·추상화 수준·네이밍·import 스타일**을 따른다.
+- **구조 일치**: `feature/`에서 쓰는 패턴(예: `from __future__ import annotations`, `BaseGraph` 래퍼, `TypedDict` 상태, `_compile_graph()`, `__all__`)을 **한 파일만 예외적으로** 바꾸지 않는다. 관례 변경은 `feature/` 전체를 맞출 별도 작업으로 다룬다.
+- **범위**: 대상 파일이 `deep_agents_from_scratch/` 등 다른 폴더에 있어도, LangGraph 데모·그래프 래퍼는 **`feature/` 관례**에 맞춘다. `base/`, `util/` import 방식도 `feature/`와 동일하게 둔다.
+
+## feature/ 공통 패턴 (참고)
+
+| 항목             | 관례                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| 모듈 docstring   | 상단에 `참고 문서:` 경로·핵심 요약                                                          |
+| import 순서      | `__future__` → stdlib `typing` → langchain/langgraph → `base` / `util`                      |
+| 상태             | `TypedDict` (+ 필요 시 `Annotated` 리듀서)                                                  |
+| 그래프 클래스    | `BaseGraph` 상속, `__init__`에서 `super()` → 의존성 → `self._graph = self._compile_graph()` |
+| 클래스 docstring | `외부에서는 `g = Foo()`뒤`g.invoke(...)`/`g.stream(...)`, 노드 구조는 `g.show_graph()````   |
+| 공개 API         | 파일 하단 `__all__`                                                                         |
+
+유사 예시 파일: `SimpleChatBot.py`, `SimpleToolNode.py`, `UpdateStateUseCommand.py`, `EdgeConditionalUseCommand.py`
 
 ## 나쁜 예 / 좋은 예
 
 ```python
-# ❌ 같은 폴더는 클래스 + BaseGraph 인데, 한 파일만 전역 함수·다른 import 순으로만 정리함
+# ❌ feature/는 BaseGraph + _compile_graph 인데, 한 파일만 전역 함수·다른 import 순으로만 정리함
 
-# ✅ feature/ 안 다른 파일을 보고 동일하게: future annotations → 서드파티 그룹 → 로컬 import,
-#    그래프 빌드 패턴(팩토리/클래스)도 형제 파일과 맞춤
+# ✅ feature/ 파일을 보고 동일하게: future annotations → 서드파티 → base/util,
+#    BaseGraph 서브클래스·_compile_graph·__all__ 도 맞춤
 ```
 
 ## 체크
 
-- diff가 **해당 폴더의 나머지 파일과 다른 “스타일만”의 변화**를 많이 만들면, 동료 파일과 다시 맞췄는지 확인한다.
+- diff에 **feature/ 관례와 어긋나는 “스타일만” 변화**가 많으면, `feature/`의 유사 파일과 다시 맞췄는지 확인한다.
