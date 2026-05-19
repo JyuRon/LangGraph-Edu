@@ -14,12 +14,19 @@ from langgraph.prebuilt import InjectedState
 from langgraph.types import Command
 from typing_extensions import TypedDict
 
-from .prompts import TASK_DESCRIPTION_PREFIX
-from .state import DeepAgentState
+from deep_agents_from_scratch.prompts import TASK_DESCRIPTION_PREFIX
+from deep_agents_from_scratch.deep_agent_state import DeepAgentState
 
 
 class SubAgent(TypedDict):
     """Configuration for a specialized sub-agent."""
+
+    """
+        - `name`: 에이전트 식별자(`main agent`에서 호출 시 사용)
+        - `description`: 역할 설명(`main agent`에서 호출 시 사용)
+        - `prompt`: 전용 시스템 프롬프트(`sub-agent` 작업 지시)
+        - `tools`: 사용 가능한 도구 목록(`sub-agent` 작업 도구)
+    """
 
     name: str
     description: str
