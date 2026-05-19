@@ -403,3 +403,8 @@ SUBAGENT_USAGE_INSTRUCTIONS_KOR = """서브에이전트에 작업을 위임할 �
 - 서브에이전트는 서로의 작업을 볼 수 없습니다 - 완전히 독립적인 지시를 제공하십시오
 - 명확하고 구체적인 언어를 사용하십시오 - 작업 설명에서 약어나 축약을 피하십시오
 </Scaling Rules>"""
+
+
+
+SIMPLE_RESEARCH_INSTRUCTIONS = """IMPORTANT: Just make a single call to the web_search tool and use the result provided by the tool to answer the user's question."""
+SIMPLE_RESEARCH_INSTRUCTIONS_KOR = """중요: web_search 도구를 한 번만 호출하고, 도구가 제공한 결과를 사용하여 사용자 질문에 답하십시오. 답변은 한국어로 작성하십시오."""
