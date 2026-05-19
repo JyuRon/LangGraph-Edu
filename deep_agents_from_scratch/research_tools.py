@@ -16,7 +16,7 @@ from tavily import TavilyClient
 from typing_extensions import Annotated, Literal
 
 from .prompts import SUMMARIZE_WEB_SEARCH
-from .state import DeepAgentState
+from .deep_agent_state import DeepAgentState
 
 
 def get_current_time() -> str:
@@ -66,6 +66,7 @@ class Summary(BaseModel):
     summary: str = Field(description="Key learnings from the webpage.")
 
 
+# tavily search -> List[raw_content] -> List[Summary]
 def summarize_webpage_contents(webpage_contents: list[str]) -> list[Summary]:
     """Summarize multiple webpage contents in parallel using batch processing.
 
@@ -197,30 +198,34 @@ def tavily_search(
         filename = result["filename"]
 
         # 전체 상세 정보를 포함한 파일 콘텐츠 생성
-        file_content = f"""# Search Result: {result['title']}
+        file_content = f"""
+            # Search Result: {result['title']}
 
-**URL:** {result['url']}
-**Query:** {query}
-**Date:** {get_current_time()}
+            **URL:** {result['url']}
+            **Query:** {query}
+            **Date:** {get_current_time()}
 
-## Summary
-{result['summary']}
+            ## Summary
+            {result['summary']}
 
-## Raw Content
-{result['raw_content'] if result['raw_content'] else 'No raw content available'}
-"""
+            ## Raw Content
+            {result['raw_content'] if result['raw_content'] else 'No raw content available'}
+        """
 
         files[filename] = file_content
         saved_files.append(filename)
         summaries.append(f"- {filename}: {result['summary']}...")
 
     # 도구 메시지를 위한 최소한의 요약 생성 - 수집된 내용에 집중
-    summary_text = f"""🔍 Found {len(processed_results)} result(s) for '{query}':
+    # chr(10) = \n
+    summary_text = f"""
+        🔍 Found {len(processed_results)} result(s) for '{query}':
 
-{chr(10).join(summaries)}
+        {chr(10).join(summaries)}
 
-Files: {', '.join(saved_files)}
-💡 Use read_file() to access full details when needed."""
+        Files: {', '.join(saved_files)}
+        💡 Use read_file() to access full details when needed.
+    """
 
     return Command(
         update={
