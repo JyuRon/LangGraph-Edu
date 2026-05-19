@@ -13,6 +13,9 @@ wheels/
 .cache/
 .DS_Store
 
+# Deep agent runtime data (TODO JSON etc.)
+deep_agents_from_scratch/.agent_data/
+
 .claude/
 
 # mermaid

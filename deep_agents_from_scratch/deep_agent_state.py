@@ -6,6 +6,19 @@ This module defines the extended agent state structure that supports:
 - Efficient state merging with reducer functions
 """
 
+
+
+"""
+## State 설계
+
+워크플로우 컨텍스트 저장을 위한 `DeepAgentState` 구조를 정의합니다. `AgentState`를 상속받아 다음 세 가지 주요 요소를 포함합니다.
+
+*   **`messages`**: 대화 기록 (`add_messages` reducer 사용)
+*   **`todos`**: 작업 리스트 (`Todo` 객체 리스트, 전체 덮어쓰기 방식; ``todo_tools``가 JSON 파일과 동기화)
+*   **`files`**: 가상 파일 시스템 (파일명-내용 매핑, `file_reducer` 사용)
+
+"""
+
 from typing import Annotated, Literal, NotRequired
 from typing_extensions import TypedDict
 from langchain.agents import AgentState
