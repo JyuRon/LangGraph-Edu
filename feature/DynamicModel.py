@@ -22,6 +22,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from base.base_graph import BaseGraph
 from util.chat_model_enums import LangChainChatModel
+from util.model_request import display_model_request
 
 _DEFAULT_MESSAGE_THRESHOLD = 10
 
@@ -55,6 +56,8 @@ def make_dynamic_model_middleware(
 
         
         print(f"모델 선택: {request.model.model}")
+
+        display_model_request(request)
 
         return handler(request)
 
