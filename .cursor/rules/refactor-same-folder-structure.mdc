@@ -22,7 +22,7 @@ alwaysApply: true
 | 클래스 docstring | `외부에서는 `g = Foo()`뒤`g.invoke(...)`/`g.stream(...)`, 노드 구조는 `g.show_graph()````   |
 | 공개 API         | 파일 하단 `__all__`                                                                         |
 
-유사 예시 파일: `SimpleChatBot.py`, `SimpleToolNode.py`, `UpdateStateUseCommand.py`, `EdgeConditionalUseCommand.py`
+유사 예시 파일: `SimpleChatBot.py`, `ToolArgsSetting.py`, `UpdateStateUseCommand.py`, `EdgeConditionalUseCommand.py`
 
 ## 나쁜 예 / 좋은 예
 
