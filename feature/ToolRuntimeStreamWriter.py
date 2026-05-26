@@ -9,6 +9,7 @@ PART02-에이전트/Ch02-에이전트/02-LangGraph-Tools.ipynb
 
 from __future__ import annotations
 
+import time
 from typing import Any, Literal, cast
 
 from langchain.agents import AgentState, create_agent
@@ -33,13 +34,23 @@ _SYSTEM_PROMPT = "You are a helpful assistant."
 
 # 참고: runtime.stream_writer를 도구 내에서 사용하는 경우,
 # 도구는 LangGraph 실행 컨텍스트 내에서 호출되어야 합니다.
+# 대용량 데이터 처리를 시뮬레이션하는 도구(예시)
 @tool
 def get_weather_with_updates(city: str, runtime: ToolRuntime) -> str:
     """Get weather for a given city."""
     writer = runtime.stream_writer
+    
+    total_items = 50
 
-    # 도구가 실행될 때 커스텀 업데이트 스트리밍
-    writer(f"Looking up data for city: {city}")
+    # 진행 상황 스트리밍
+    for i in range(0, total_items, 10):
+        progress = min(i + 10, total_items)
+        writer({"stage": "processing", "progress": progress, "total": total_items})
+        time.sleep(0.1)  # 작업 시뮬레이션
+
+    # 완료 상태 스트리밍
+    writer({"stage": "completed", "messages": total_items})
+    writer({"stage": "completed", "messages" : f"In the {city}"})
     writer(f"Acquired data for city: {city}")
 
     return f"It's always sunny in {city}!"
