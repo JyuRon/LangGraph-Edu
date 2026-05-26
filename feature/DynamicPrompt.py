@@ -24,14 +24,22 @@ from util.chat_model_enums import LangChainChatModel
 from util.model_request import display_model_request
 
 _DEFAULT_PROMPT_TYPE = "default"
+_DEFAULT_LANGUAGE = "korean"
+_DEFAULT_USER_NAME = "사용자"
 _DEFAULT_ANSWER_LENGTH = 20
-_BASE_SYSTEM_PROMPT = "You are a helpful assistant. Answer in Korean.\n"
+_BASE_SYSTEM_PROMPT = "You are a helpful assistant.\n"
 
 # 답변 형식에 따라 시스템 프롬프트 생성(동적 프롬프팅)
 _PROMPT_FORMAT_BY_TYPE: dict[str, str] = {
-    "default": "[답변 형식] 간결하게 답변해줘. 답변 길이는 {length}자 이하로 해줘.",
-    "sns": "[답변 형식] SNS 형식으로 답변해줘. 답변 길이는 {length}자 이하로 해줘.",
-    "article": "[답변 형식] 뉴스 기사 형식으로 답변해줘. 답변 길이는 {length}자 이하로 해줘.",
+    "default": "{language}, user name is {user_name}. [Response format] Answer concisely. Keep the response within {length} characters.",
+    "sns": "{language}, user name is {user_name}. [Response format] Answer in SNS style. Keep the response within {length} characters.",
+    "article": "{language}, user name is {user_name}. [Response format] Answer in news article style. Keep the response within {length} characters.",
+}
+
+_PROMPT_LANGUAGE_BY_TYPE: dict[str, str] = {
+    "korean": "only answer in Korean.",
+    "english": "only answer in English.",
+    "chinese": "only answer in Chinese.",
 }
 
 
@@ -40,6 +48,8 @@ class DynamicPromptContext(TypedDict):
 
     prompt_type: str
     length: int
+    language: str
+    user_name: str
 
 
 @dynamic_prompt  # before_model
@@ -58,13 +68,29 @@ def user_role_prompt(request: ModelRequest) -> str:
         else _DEFAULT_ANSWER_LENGTH
     )
 
+    # 답변 언어 설정
+    answer_language = (
+        request.runtime.context.get("language", _DEFAULT_LANGUAGE)
+        if request.runtime.context
+        else _DEFAULT_LANGUAGE
+    )
+
+    # 사용자 정보
+    user_name = (
+        request.runtime.context.get("user_name", _DEFAULT_USER_NAME)
+        if request.runtime.context
+        else _DEFAULT_USER_NAME
+    )
+
     format_hint = _PROMPT_FORMAT_BY_TYPE.get(
         answer_type, _PROMPT_FORMAT_BY_TYPE[_DEFAULT_PROMPT_TYPE]
     )
 
+    print(format_hint.format(length=answer_length, language=_PROMPT_LANGUAGE_BY_TYPE[answer_language], user_name=user_name))
+
     display_model_request(request)
 
-    return f"{_BASE_SYSTEM_PROMPT} {format_hint.format(length=answer_length)}"
+    return f"{_BASE_SYSTEM_PROMPT} {format_hint.format(length=answer_length, language=_PROMPT_LANGUAGE_BY_TYPE[answer_language], user_name=user_name)}"
 
 
 class DynamicPromptAgent(BaseGraph):
@@ -76,7 +102,7 @@ class DynamicPromptAgent(BaseGraph):
 
     def __init__(
         self,
-        model: str | LangChainChatModel = LangChainChatModel.OPENAI_GPT_4O_MINI,
+        model: str | LangChainChatModel = LangChainChatModel.OPENAI_GPT_4O,
         *,
         load_env: bool = True,
         langsmith_project: str | None = None,
@@ -99,6 +125,7 @@ class DynamicPromptAgent(BaseGraph):
                 cast(AgentMiddleware[Any, DynamicPromptContext], user_role_prompt)
             ],
             context_schema=DynamicPromptContext,
+            system_prompt="only answer in Japaness."
         )
         return cast(CompiledStateGraph, agent)
 
