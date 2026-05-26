@@ -10,6 +10,7 @@ PART02-에이전트/Ch02-에이전트/01-LangGraph-Agents.ipynb
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any, cast
 
 from langchain.agents import create_agent
@@ -28,23 +29,36 @@ from util.messages import depth_colors
 
 # 노드 스타일: 모델 호출 전 로깅
 _QUERY_REWRITE_TEMPLATE = (
+    "Answer in Koeran"
     "Rewrite the following query to be more understandable. "
     "Do not change the original meaning. Make it one sentence: {query}"
 )
 
 _MAGENTA, _RESET = depth_colors[1], depth_colors["reset"]
 
+@dataclass
+class Context:
+    user_name: str
+    session_id: str
+
+
 
 def make_middleware_annotaion_simple_hooks(
     *,
     rewrite_llm: BaseChatModel,
-) -> tuple[AgentMiddleware, AgentMiddleware]:
+) -> tuple[AgentMiddleware[AgentState, Context], AgentMiddleware[AgentState, Context]]:
     """쿼리 재작성·로깅용 ``before_model`` / ``after_model`` 미들웨어 쌍."""
 
     query_rewrite = PromptTemplate.from_template(_QUERY_REWRITE_TEMPLATE) | rewrite_llm
 
     @before_model
-    def log_before_model(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    def log_before_model(state: AgentState, runtime: Runtime[Context]) -> dict[str, Any] | None:
+
+        # 모델 호출 전 로깅
+        print(f"[Before Model] User: {runtime.context.user_name}")
+        print(f"[Before Model] Response generated for session: {runtime.context.session_id}")
+
+
         print(
             f"{_MAGENTA}\n\n모델 호출 전 메시지 {len(state['messages'])}개가 있습니다{_RESET}"
         )
@@ -56,7 +70,12 @@ def make_middleware_annotaion_simple_hooks(
         return {"messages": [HumanMessage(content=rewritten_query.content)]}
 
     @after_model
-    def log_after_model(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    def log_after_model(state: AgentState, runtime: Runtime[Context]) -> dict[str, Any] | None:
+        # 모델 호출 전 로깅
+        print(f"[After Model] User: {runtime.context.user_name}")
+        print(f"[After Model] Response generated for session: {runtime.context.session_id}")
+
+
         print(
             f"{_MAGENTA}\n\n모델 호출 후 메시지 {len(state['messages'])}개가 있습니다{_RESET}"
         )
@@ -104,7 +123,7 @@ class MiddlewareAnnotaionSimpleAgent(BaseGraph):
         before_hook, after_hook = make_middleware_annotaion_simple_hooks(
             rewrite_llm=self._rewrite_llm,
         )
-        middleware: Sequence[AgentMiddleware] = [before_hook, after_hook]
+        middleware: Sequence[AgentMiddleware[AgentState, Context]] = [before_hook, after_hook]
         agent = create_agent(
             model=self._llm,
             tools=[],
