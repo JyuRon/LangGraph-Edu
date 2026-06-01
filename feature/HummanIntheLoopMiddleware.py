@@ -8,7 +8,7 @@
 
 edit 결정 시 ``EditAwareHumanInTheLoopMiddleware`` 로 "사람이 수정한 최종 행동"임을
 모델에 알려, 원본 요청으로 되돌아가 다시 interrupt 되는 루프를 막는다.
-(구현: ``feature.hitl.EditAwareHumanInTheLoopMiddleware``)
+(구현: ``feature.EditAwareHumanInTheLoopMiddleware``)
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.graph.state import CompiledStateGraph
 
 from base.base_graph import BaseGraph
-from feature.hitl.EditAwareHumanInTheLoopMiddleware import (
+from feature.EditAwareHumanInTheLoopMiddleware import (
     DEFAULT_EDIT_NOTICE,
     EditAwareHumanInTheLoopMiddleware,
 )

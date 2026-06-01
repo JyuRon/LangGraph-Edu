@@ -22,21 +22,13 @@ alwaysApply: true
 | 클래스 docstring | `외부에서는 `g = Foo()`뒤`g.invoke(...)`/`g.stream(...)`, 노드 구조는 `g.show_graph()````   |
 | 공개 API         | 파일 하단 `__all__`                                                                         |
 
-유사 예시 파일: `graph/SimpleChatBot.py`, `tools/ToolArgsSetting.py`, `graph/UpdateStateUseCommand.py`, `graph/EdgeConditionalUseCommand.py`
+유사 예시 파일: `SimpleChatBot.py`, `ToolArgsSetting.py`, `UpdateStateUseCommand.py`, `EdgeConditionalUseCommand.py`
 
-## feature/ 하위 패키지 (주제별)
+## 디렉터리 배치
 
-| 패키지                       | 내용                                               |
-| ---------------------------- | -------------------------------------------------- |
-| `feature/graph/`             | StateGraph, Command, Send, Config, 캐시, 재귀 제한 |
-| `feature/persistence/`       | 체크포인트, 장기 메모리, HITL, Replay              |
-| `feature/tools/`             | 도구 정의·인자 주입, ToolRuntime                   |
-| `feature/agent/`             | `create_agent`, 미들웨어, dynamic prompt/model     |
-| `feature/structured_output/` | ProviderStrategy, ToolStrategy, handle_errors      |
-| `feature/use_cases/`         | SQL Agent, DB Runtime 연동                         |
-
-import 예: `from feature.graph.SimpleChatBot import SimpleChatBot`  
-테스트 노트북: `test/<패키지>/` 에 동일 주제로 배치
+- `feature/`, `test/`, `note/` 는 **하위 패키지 없이** 각 루트에 파일을 둔다 (예: `feature/SimpleChatBot.py`, `test/SimpleChatBot_test.ipynb`, `note/Send.md`).
+- import 예: `from feature.SimpleChatBot import SimpleChatBot`
+- 테스트·노트는 **파일명**으로 예제와 짝을 맞춘다 (`*_test.ipynb`, 관련 `.md`).
 
 ## 나쁜 예 / 좋은 예
 

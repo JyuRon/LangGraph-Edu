@@ -6,7 +6,7 @@
 
 - 공식·스킬: `.agents/skills/langchain-fundamentals/SKILL.md` (`create_agent` 섹션)
 - 튜토리얼 노트북: `PART02-에이전트/Ch02-에이전트/01-LangGraph-Agents.ipynb`, `02-LangGraph-Tools.ipynb`
-- `feature/` 는 `StateGraph` 직접 조립 예제(`SimpleChatBot`, `HumanIntheLoopUseCommandResume` 등)와 `create_agent` 예제가 섞여 있음 — **이 문서는 `create_agent` 만** 대상
+- `feature/` 는 `StateGraph` 직접 조립 예제(`feature/SimpleChatBot`, `feature/HumanIntheLoopUseCommandResume` 등)와 `create_agent` 예제가 섞여 있음 — **이 문서는 `create_agent` 만** 대상
 
 ---
 
@@ -77,7 +77,7 @@ agent = create_agent(model=llm, tools=[])
 - **참고:** `DynamicPrompt` 는 `@dynamic_prompt` 미들웨어가 **런타임에** 시스템 프롬프트 문자열을 바꾸므로, `create_agent` 에 `system_prompt` 를 넘기지 않음
 
 ```python
-# feature/agent/ResponseFormat.py
+# feature/ResponseFormat.py
 agent = create_agent(
     model=self._llm,
     system_prompt="Extract useful information from the email.",
@@ -102,7 +102,7 @@ agent = create_agent(
 | `@dynamic_prompt`                | `DynamicPrompt`             | 프롬프트 생성  | `context` 의 `prompt_type`, `length` 로 시스템 프롬프트 동적 생성 |
 
 ```python
-# feature/agent/MiddlewareClassSimple.py
+# feature/MiddlewareClassSimple.py
 agent = create_agent(
     model=self._llm,
     tools=[],
@@ -116,7 +116,7 @@ agent = create_agent(
 
 - **타입:** Pydantic `BaseModel` 서브클래스
 - **결과:** `invoke` 반환값의 `structured_response` 키에 검증된 객체
-- **예:** `feature/agent/ResponseFormat.py` — 이메일 발신자·주소 필드
+- **예:** `feature/ResponseFormat.py` — 이메일 발신자·주소 필드
 
 ```python
 result = agent.invoke({"messages": [{"role": "user", "content": "From: ..."}]})
@@ -132,7 +132,7 @@ result["structured_response"]  # ResponseFormat 인스턴스
 - **연계:** `@dynamic_prompt` / `ToolRuntime` 의 `runtime.context` 에서 읽음
 
 ```python
-# feature/agent/DynamicPrompt.py
+# feature/DynamicPrompt.py
 agent = create_agent(
     model=self._llm,
     tools=[],
@@ -151,7 +151,7 @@ agent = create_agent(
 - **예:** `ToolRuntimeToolCallID.CustomState` — `user_preferences` 등
 
 ```python
-# feature/tools/ToolRuntimeToolCallID.py
+# feature/ToolRuntimeToolCallID.py
 agent = create_agent(
     self._llm,
     tools=[...],
@@ -180,7 +180,7 @@ agent = create_agent(
 - **예:** `ToolRuntimeStore` — `get_user_info` / `save_user_info`
 
 ```python
-# feature/tools/ToolRuntimeStore.py
+# feature/ToolRuntimeStore.py
 agent = create_agent(
     self._llm,
     tools=[get_user_info, save_user_info],

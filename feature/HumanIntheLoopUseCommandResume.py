@@ -1,6 +1,8 @@
 """
 참고 문서:
 /langgraph-v1-tutorial/PART01-LangGraph-기초/Ch01-그래프-생성하기/01-QuickStart-LangGraph-Tutorial.ipynb
+note/LangGraph-Interrupt-Patterns.md
+note/Commnad.md
 """
 
 from __future__ import annotations
