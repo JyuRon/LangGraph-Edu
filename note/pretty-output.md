@@ -399,7 +399,7 @@ visualize_graph(g.graph, ascii=True)
 **`BaseGraph`와 함께**
 
 ```python
-from feature.SimpleChatBot import SimpleChatBot
+from feature.graph.SimpleChatBot import SimpleChatBot
 
 bot = SimpleChatBot()
 bot.show_graph()       # xray=False
@@ -596,7 +596,7 @@ flowchart TD
 ## 5. `BaseGraph`와의 연결
 
 ```python
-from feature.ToolArgsSetting import ToolArgsSetting
+from feature.tools.ToolArgsSetting import ToolArgsSetting
 
 workflow = ToolArgsSetting()
 

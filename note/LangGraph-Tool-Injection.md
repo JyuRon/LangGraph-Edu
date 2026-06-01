@@ -8,7 +8,7 @@ LangChain·LangGraph에서 `@tool` 함수의 일부 파라미터는 **LLM이 채
 - 노트북: `deep_agents_from_scratch/notebooks_original/05-DeepAgents-Full-Version.ipynb` (`tavily_search`)
 - 노트북: `deep_agents_from_scratch/notebooks/01-AgentState.ipynb` (State Injection 섹션)
 - 구현: `deep_agents_from_scratch/research_tools.py`, `file_tools.py`, `todo_tools.py`, `task_tool.py`
-- 예제: `feature/UpdateStateUseCommand.py` (`human_review` + HITL)
+- 예제: `feature/graph/UpdateStateUseCommand.py` (`human_review` + HITL)
 
 ---
 
@@ -107,7 +107,7 @@ LLM이 툴을 호출할 때마다 `tool_call_id`가 생성됩니다. 실행이 �
 3. **인간 개입**(선택): `interrupt()` 후 사용자 입력
 4. **반환**: `ToolMessage(..., tool_call_id=tool_call_id)`로 같은 ID에 응답 연결
 
-### HITL 예제 (`feature/UpdateStateUseCommand.py`)
+### HITL 예제 (`feature/graph/UpdateStateUseCommand.py`)
 
 ```python
 @tool
@@ -335,10 +335,10 @@ from langgraph.types import Command
 
 ## 관련 소스
 
-| 파일                               | 사용하는 마커                                            |
-| ---------------------------------- | -------------------------------------------------------- |
-| `research_tools.py`                | `InjectedState`, `InjectedToolCallId`, `InjectedToolArg` |
-| `file_tools.py`                    | `InjectedState`, `InjectedToolCallId`                    |
-| `todo_tools.py`                    | `InjectedState`, `InjectedToolCallId`                    |
-| `task_tool.py`                     | `InjectedState`, `InjectedToolCallId`                    |
-| `feature/UpdateStateUseCommand.py` | `InjectedToolCallId`                                     |
+| 파일                                     | 사용하는 마커                                            |
+| ---------------------------------------- | -------------------------------------------------------- |
+| `research_tools.py`                      | `InjectedState`, `InjectedToolCallId`, `InjectedToolArg` |
+| `file_tools.py`                          | `InjectedState`, `InjectedToolCallId`                    |
+| `todo_tools.py`                          | `InjectedState`, `InjectedToolCallId`                    |
+| `task_tool.py`                           | `InjectedState`, `InjectedToolCallId`                    |
+| `feature/graph/UpdateStateUseCommand.py` | `InjectedToolCallId`                                     |

@@ -32,7 +32,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.runtime import Runtime
 
 from base.base_graph import BaseGraph
-from feature.SQLAgentGraph import SQLAgentGraph
+from feature.use_cases.SQLAgentGraph import SQLAgentGraph
 from util.chat_model_enums import LangChainChatModel
 
 
