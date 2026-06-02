@@ -7,7 +7,7 @@ PART02-에이전트/Ch03-Runtime/04-LangGraph-Runtime.ipynb
 ``context_schema`` 로 PostgreSQL 연결·권한·요청 설정을 주입하고,
 ``ToolRuntime``(도구)과 ``Runtime``(미들웨어)에서 ``context`` 에 접근한다.
 
-``create_sql_agent_tool`` 은 ``SQLAgentGraph`` 를 래핑해 자연어 SQL 조회 도구를 반환하는
+``create_sql_agent_tool`` 은 ``SQLFullGraph`` 를 래핑해 자연어 SQL 조회 도구를 반환하는
 팩토리 함수다 (``task_tool._create_task_tool`` 과 같은 팩토리 패턴).
 """
 
@@ -32,7 +32,7 @@ from langgraph.prebuilt import ToolNode
 from langgraph.runtime import Runtime
 
 from base.base_graph import BaseGraph
-from feature.SQLAgentGraph import SQLAgentGraph
+from feature.SQLFullGraph import SQLFullGraph
 from util.chat_model_enums import LangChainChatModel
 
 
@@ -181,10 +181,10 @@ def create_sql_agent_tool(
     db: SQLDatabase,
     model: str | LangChainChatModel = LangChainChatModel.OPENAI_GPT_4O,
 ) -> BaseTool:
-    """``SQLAgentGraph`` 인스턴스를 캡처해 자연어 SQL 조회 도구로 래핑한다.
+    """``SQLFullGraph`` 인스턴스를 캡처해 자연어 SQL 조회 도구로 래핑한다.
 
     ``task_tool._create_task_tool`` 과 같은 팩토리 패턴:
-    ``db``·``model`` 로 ``SQLAgentGraph`` 를 미리 생성한 뒤,
+    ``db``·``model`` 로 ``SQLFullGraph`` 를 미리 생성한 뒤,
     반환된 도구가 호출될 때마다 해당 그래프로 위임한다.
 
     ``DatabaseContext.user_id`` 를 LangGraph ``thread_id`` 로 활용해
@@ -192,14 +192,14 @@ def create_sql_agent_tool(
 
     Args:
         db: 연결된 ``SQLDatabase`` 인스턴스.
-        model: ``SQLAgentGraph`` 에서 사용할 LLM 모델 이름 또는 열거형.
+        model: ``SQLFullGraph`` 에서 사용할 LLM 모델 이름 또는 열거형.
 
     Returns:
         ``query_database_with_agent`` 도구 인스턴스.
     """
-    # SQLAgentGraph 미리 생성 — 이후 도구 호출마다 재사용
+    # SQLFullGraph 미리 생성 — 이후 도구 호출마다 재사용
     # 환경 변수는 부모 에이전트가 이미 로드했으므로 load_env=False
-    sql_graph = SQLAgentGraph(db=db, model=model, load_env=False)
+    sql_graph = SQLFullGraph(db=db, model=model, load_env=False)
 
     @tool(parse_docstring=True)
     def query_database_with_agent(
@@ -208,7 +208,7 @@ def create_sql_agent_tool(
     ) -> str:
         """Run a natural-language question against the database via the SQL agent.
 
-        ``SQLAgentGraph`` 를 통해 자연어 질문을 SQL 쿼리로 변환·실행하고
+        ``SQLFullGraph`` 를 통해 자연어 질문을 SQL 쿼리로 변환·실행하고
         해석된 자연어 답변을 반환한다.
 
         Args:
@@ -239,7 +239,7 @@ class RuntimeDBConnectionAgent(BaseGraph):
     LangGraph **노드 구조**는 ``g.show_graph()`` 로 본다.
 
     DB 연결은 ``util.postgres_connection.connect_postgres`` 후 ``DatabaseContext`` 를 ``invoke`` 에 넘긴다.
-    ``db`` 를 넘기면 ``SQLAgentGraph`` 기반 ``query_database_with_agent`` 도구가 자동으로 추가된다.
+    ``db`` 를 넘기면 ``SQLFullGraph`` 기반 ``query_database_with_agent`` 도구가 자동으로 추가된다.
     """
 
     def __init__(
@@ -268,7 +268,7 @@ class RuntimeDBConnectionAgent(BaseGraph):
     def _compile_graph(self) -> CompiledStateGraph:
         tools: list[BaseTool] = [logging_after_user_tool]
 
-        # db 가 주입된 경우 SQLAgentGraph 기반 SQL 조회 도구를 추가한다
+        # db 가 주입된 경우 SQLFullGraph 기반 SQL 조회 도구를 추가한다
         if self._db is not None:
             tools.append(create_sql_agent_tool(self._db, model=self._model))
 
