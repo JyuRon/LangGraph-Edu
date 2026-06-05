@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterator
 from typing import Any, Callable, cast
 
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import StateSnapshot
 
 from .graph_structure_image import GraphStructureImage
 from .langchain_project import LangChainProjectSetup
@@ -27,6 +29,8 @@ class BaseGraph(LangChainProjectSetup, GraphStructureImage, ABC):
     - ``invoke()`` → ``util.messages.invoke_graph(graph, inputs=..., config=...)`` 위임 후
       마지막 상태 스냅샷을 반환합니다.
     - ``stream()`` → ``util.messages.stream_graph(graph, inputs=..., config=...)`` 위임합니다.
+    - ``get_snapshot()`` → ``graph.get_state(config)`` 위임. ``snapshot.next`` 로 다음 노드 확인.
+    - ``get_state_history()`` → ``graph.get_state_history(config)`` 위임. time travel·replay용.
     """
 
     _graph: CompiledStateGraph
@@ -123,6 +127,43 @@ class BaseGraph(LangChainProjectSetup, GraphStructureImage, ABC):
             context=context,
             node_names=[] if node_names is None else node_names,
             callback=cast(Any, callback),
+        )
+
+    def get_snapshot(
+        self,
+        config: RunnableConfig | None = None,
+        *,
+        subgraphs: bool = False,
+    ) -> StateSnapshot:
+        """체크포인터 스레드의 현재 상태 스냅샷을 반환한다.
+
+        subgraphs : 서브그래프 상태도 포함할지 여부, 데이터 유실은 발생하지 않는다.
+
+        ``snapshot.values`` — 현재 state dict
+        ``snapshot.next`` — 다음에 실행될 노드 튜플 (``interrupt_before`` 중단 시 확인)
+        """
+        return self._graph.get_state(
+            config or cast(RunnableConfig, {}),
+            subgraphs=subgraphs,
+        )
+
+    def get_state_history(
+        self,
+        config: RunnableConfig | None = None,
+        *,
+        filter: dict[str, Any] | None = None,
+        before: RunnableConfig | None = None,
+        limit: int | None = None,
+    ) -> Iterator[StateSnapshot]:
+        """체크포인터 스레드의 상태 스냅샷 이력을 최신순으로 순회한다.
+
+        ``filter`` / ``before`` / ``limit`` — LangGraph ``get_state_history`` 와 동일.
+        """
+        return self._graph.get_state_history(
+            config or cast(RunnableConfig, {}),
+            filter=filter,
+            before=before,
+            limit=limit,
         )
 
     def show_graph(self, *, xray: bool = False, ascii: bool = False) -> None:
